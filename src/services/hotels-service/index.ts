@@ -37,8 +37,39 @@ async function getHotels(userId: number): Promise<Hotel[]> {
   return hotelsRepository.getHotels();
 }
 
+async function getHotelRooms(userId: number, hotelId: string) {
+  const user = await checkUser(userId);
+  const ticket = await ticketRepository.findTicketByEnrollmentId(user);
+  const hotel = Number(hotelId);
+    
+  if(!ticket) {
+    throw notFoundError();
+  }
+  if(!hotel) {
+    throw notFoundError();
+  }
+  if(!ticket.TicketType.isRemote) {
+    throw unauthorizedError();
+  }
+  if(!ticket.TicketType.includesHotel) {
+    throw unauthorizedError();
+  }
+  if(ticket.status === "RESERVED") {
+    throw invalidDataError;
+  }
+
+  const rooms = await hotelsRepository.getHotelRooms(hotel);
+
+  if(rooms.length === 0) {
+    throw notFoundError();
+  }
+
+  return rooms;
+}
+
 const hotelsService = {
-  getHotels
+  getHotels,
+  getHotelRooms
 };
 
 export default hotelsService;
