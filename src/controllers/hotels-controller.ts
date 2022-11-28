@@ -11,34 +11,36 @@ export async function getHotels(req: AuthenticatedRequest, res: Response) {
     const hotels: Hotel[] = await hotelsService.getHotels(userId);
     return res.status(httpStatus.OK).send(hotels);
   } catch (error) {
-    if (error.name === "NotFoundError") {
-      return res.status(httpStatus.NOT_FOUND).send(error);
+    if(error.name === "ForbiddenError") {
+      return res.status(httpStatus.FORBIDDEN).send(error.message);
     }
-    if (error.name === "UnauthorizedError") {
-      return res.status(httpStatus.UNAUTHORIZED).send(error);
+    if(error.name === "UnauthorizedError") {
+      return res.status(httpStatus.UNAUTHORIZED).send(error.message);
     }
-    if (error.name === "invalidDataError") {
-      return res.status(httpStatus.BAD_REQUEST).send(error);
+    if(error.name === "PaymentRequired") {
+      return res.status(httpStatus.PAYMENT_REQUIRED).send(error.message);
     }
+    return res.sendStatus(httpStatus.NOT_FOUND);
   }
 }
 
 export async function getHotelRooms(req: AuthenticatedRequest, res: Response) {
   const { userId } = req;
-  const { hotelId } = req.params;
+  const hotelId = Number(req.params.hotelId);
 
   try {
     const rooms = await hotelsService.getHotelRooms(userId, hotelId);
     return res.status(httpStatus.OK).send(rooms);
   } catch (error) {
-    if (error.name === "NotFoundError") {
-      return res.status(httpStatus.NOT_FOUND).send(error);
+    if(error.name === "ForbiddenError") {
+      return res.status(httpStatus.FORBIDDEN).send(error.message);
     }
-    if (error.name === "UnauthorizedError") {
-      return res.status(httpStatus.UNAUTHORIZED).send(error);
+    if(error.name === "UnauthorizedError") {
+      return res.status(httpStatus.UNAUTHORIZED).send(error.message);
     }
-    if (error.name === "invalidDataError") {
-      return res.status(httpStatus.BAD_REQUEST).send(error);
+    if(error.name === "PaymentRequired") {
+      return res.status(httpStatus.PAYMENT_REQUIRED).send(error.message);
     }
+    return res.sendStatus(httpStatus.NOT_FOUND);
   }
 }

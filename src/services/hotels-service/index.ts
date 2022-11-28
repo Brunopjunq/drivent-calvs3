@@ -1,66 +1,68 @@
-import { invalidDataError, notFoundError, unauthorizedError } from "@/errors";
+import { forbiddenError, notFoundError, paymentRequiredError, unauthorizedError } from "@/errors";
 import enrollmentRepository from "@/repositories/enrollment-repository";
 import hotelsRepository from "@/repositories/hotels-repository";
+import paymentRepository from "@/repositories/payment-repository";
 import ticketRepository from "@/repositories/ticket-repository";
 import { Hotel } from "@prisma/client";
 
-async function checkUser(userId: number) {
-  const user = await enrollmentRepository.findWithAddressByUserId(userId);
-
-  if(!user) {
-    throw unauthorizedError();
-  }
-
-  return user.id;
-}
-
 async function getHotels(userId: number): Promise<Hotel[]> {
-  const user = await checkUser(userId);
-  const ticket = await ticketRepository.findTicketByEnrollmentId(user);
+  const enrollment = await enrollmentRepository.findWithAddressByUserId(userId);
+  const ticket = await ticketRepository.findTicketByEnrollmentId(enrollment.id);
+  const payment = await paymentRepository.findPaymentByTicketId(ticket.id);
 
-  if (!ticket) {
+  if(!enrollment) {
     throw notFoundError();
   }
 
-  if(!ticket.TicketType.isRemote) {
+  if(!ticket) {
     throw unauthorizedError();
+  }
+
+  if(!payment) {
+    throw paymentRequiredError();
+  }
+
+  if(ticket.TicketType.isRemote) {
+    throw forbiddenError();
   }
 
   if(!ticket.TicketType.includesHotel) {
-    throw unauthorizedError();
+    throw forbiddenError();
   }
 
-  if(ticket.status === "RESERVED") {
-    throw invalidDataError;
-  }
+  const hotels = await hotelsRepository.getHotels();
 
-  return hotelsRepository.getHotels();
+  return hotels;
 }
 
-async function getHotelRooms(userId: number, hotelId: string) {
-  const user = await checkUser(userId);
-  const ticket = await ticketRepository.findTicketByEnrollmentId(user);
-  const hotel = Number(hotelId);
-    
+async function getHotelRooms(userId: number, hotelId: number) {
+  const enrollment = await enrollmentRepository.findWithAddressByUserId(userId);
+  const ticket = await ticketRepository.findTicketByEnrollmentId(enrollment.id);
+  const payment = await paymentRepository.findPaymentByTicketId(ticket.id);
+
+  if(!enrollment) {
+    throw notFoundError();
+  }
+
   if(!ticket) {
-    throw notFoundError();
-  }
-  if(!hotel) {
-    throw notFoundError();
-  }
-  if(!ticket.TicketType.isRemote) {
     throw unauthorizedError();
   }
+
+  if(!payment) {
+    throw paymentRequiredError();
+  }
+
+  if(ticket.TicketType.isRemote) {
+    throw forbiddenError();
+  }
+
   if(!ticket.TicketType.includesHotel) {
-    throw unauthorizedError();
-  }
-  if(ticket.status === "RESERVED") {
-    throw invalidDataError;
+    throw forbiddenError();
   }
 
-  const rooms = await hotelsRepository.getHotelRooms(hotel);
+  const rooms = await hotelsRepository.getHotelRooms(hotelId);
 
-  if(rooms.length === 0) {
+  if(!rooms) {
     throw notFoundError();
   }
 
